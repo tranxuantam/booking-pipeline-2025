@@ -1,5 +1,5 @@
 -- 1. Staging: làm sạch dữ liệu thô
-CREATE TABLE IF NOT EXISTS `booking-project-479502.booking_dataset.stg_booking_hotels` AS
+INSERT INTO `booking-project-479502.booking_dataset.stg_booking_hotels`
 
 WITH raw AS (
   SELECT *
