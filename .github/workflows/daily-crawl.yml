@@ -60,13 +60,11 @@ jobs:
           echo "=== DEBUG: Bắt đầu crawler_to_bigquery.py ==="
           python crawler_to_bigquery.py
           echo "=== END CRAWL ==="
-
       - name: 1. Staging Table
         continue-on-error: true
         run: |
           echo "=== DEBUG: Chạy 1_Staging.sql ==="
           bq query --nouse_legacy_sql --replace --location=US \
-            --destination_table=${GCP_PROJECT}.${GCP_DATASET}.stg_booking_hotels \
             < sql/1_Staging.sql
           echo "=== END STAGING ==="
 
