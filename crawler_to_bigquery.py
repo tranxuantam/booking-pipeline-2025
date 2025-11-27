@@ -1,5 +1,6 @@
-# crawler_to_bigquery.py – ĐÃ ĐỔI THÀNH WRITE_APPEND (ghi thêm mỗi ngày)
+# crawler_to_bigquery.py 
 import asyncio
+import os
 import random
 from datetime import datetime, timedelta
 from urllib.parse import quote_plus
@@ -145,7 +146,7 @@ async def main():
             page = await context.new_page()
             tasks.append(asyncio.create_task(worker(page)))
 
-        print("Bắt đầu crawl 10.000 bản ghi – sẽ ghi THÊM vào BigQuery mỗi ngày...")
+        print("Bắt đầu crawl bản ghi – sẽ ghi THÊM vào BigQuery mỗi ngày...")
         await asyncio.gather(*tasks)
         await browser.close()
 
@@ -160,7 +161,7 @@ async def main():
         df,
         f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}",
         job_config=bigquery.LoadJobConfig(
-            write_disposition="WRITE_APPEND",   # ←←←← ĐÃ ĐỔI THÀNH GHI THÊM
+            write_disposition="WRITE_APPEND",  
             autodetect=False
         )
     )
