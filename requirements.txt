@@ -1,3 +1,7 @@
+playwright==1.40.0
 pandas
 google-cloud-bigquery
-playwright
+pyarrow         
+db-dtypes         
+asyncio
+urllib3
