@@ -1,11 +1,13 @@
--- dim_date
-CREATE OR REPLACE TABLE booking_dataset.dim_date AS
+-- 1. Tạo bảng tạm cho dim_date
+CREATE OR REPLACE TABLE `booking-project-479502.booking_dataset.dim_date_temp` AS
 
 WITH all_dates AS (
-  -- Lấy tất cả ngày checkin + checkout
-  SELECT DISTINCT checkin_date  AS date_key, day_of_week AS day_of_week_vn FROM booking_dataset.stg_booking_hotels
+  -- Lấy tất cả ngày checkin + checkout từ dữ liệu mới
+  SELECT DISTINCT checkin_date  AS date_key, day_of_week AS day_of_week_vn 
+  FROM `booking-project-479502.booking_dataset.stg_booking_hotels`
   UNION ALL
-  SELECT DISTINCT checkout_date AS date_key, day_of_week AS day_of_week_vn FROM booking_dataset.stg_booking_hotels
+  SELECT DISTINCT checkout_date AS date_key, day_of_week AS day_of_week_vn 
+  FROM `booking-project-479502.booking_dataset.stg_booking_hotels`
 ),
 
 clean_date AS (
@@ -28,3 +30,27 @@ SELECT
   date_key IN ('2025-12-24','2025-12-25','2025-12-31') AS is_peak_holiday
 FROM clean_date
 ORDER BY date_key;
+
+-- 2. Kiểm tra và gộp dữ liệu cho dim_date
+BEGIN
+  DECLARE dim_date_exists BOOL DEFAULT (
+    SELECT COUNT(*) > 0 
+    FROM `booking-project-479502.booking_dataset.INFORMATION_SCHEMA.TABLES` 
+    WHERE table_name = 'dim_date'
+  );
+  
+  -- Nếu bảng chính chưa tồn tại, tạo bảng mới
+  IF NOT dim_date_exists THEN
+    CREATE OR REPLACE TABLE `booking-project-479502.booking_dataset.dim_date` AS
+    SELECT * FROM `booking-project-479502.booking_dataset.dim_date_temp`;
+  ELSE
+    -- Nếu bảng chính đã tồn tại, gộp dữ liệu cũ + mới
+    CREATE OR REPLACE TABLE `booking-project-479502.booking_dataset.dim_date` AS
+    SELECT * FROM `booking-project-479502.booking_dataset.dim_date`  -- DỮ LIỆU CŨ
+    UNION DISTINCT
+    SELECT * FROM `booking-project-479502.booking_dataset.dim_date_temp`;  -- DỮ LIỆU MỚI
+  END IF;
+END;
+
+-- 3. Xóa bảng tạm
+DROP TABLE IF EXISTS `booking-project-479502.booking_dataset.dim_date_temp`;
