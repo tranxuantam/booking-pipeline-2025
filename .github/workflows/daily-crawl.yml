@@ -1,0 +1,28 @@
+name: Daily Crawl & Load to BigQuery
+
+on:
+  schedule:
+    - cron: '0 1 * * *'   # 8h sáng Việt Nam mỗi ngày
+  workflow_dispatch:
+
+jobs:
+  run-crawler:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium --with-deps
+
+      - name: Create GCP key
+        run: echo '${{ secrets.GCP_SA_KEY }}' > gcp-key.json
+
+      - name: Run crawler
+        run: python crawler_to_bigquery.py
