@@ -1,61 +1,60 @@
-name: Daily Full ETL – Crawl → Raw → Staging → Dim → Fact
+name: Daily Booking Pipeline
 
 on:
   schedule:
-    - cron: '0 1 * * *'   # Mỗi ngày 8h00 sáng Việt Nam (1h UTC)
-  workflow_dispatch:      # Cho phép chạy tay bất kỳ lúc nào
+    - cron: '0 1 * * *'   # 8h sáng Việt Nam
+  workflow_dispatch:
 
 jobs:
-  full-pipeline:
+  run-pipeline:
     runs-on: ubuntu-latest
     env:
-      GCP_PROJECT: booking-project-479502    
+      GCP_PROJECT: booking-project-479502
       GCP_DATASET: booking_dataset
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Setup Python + Playwright
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-
-      - name: Install Python packages & Playwright browser
-        run: |
-          pip install -r requirements.txt
+      - run: |
+          pip install -q install -r requirements.txt
           playwright install chromium --with-deps
 
-      - name: Create GCP service account key
-        run: echo '${{ secrets.GCP_SA_KEY }}' > gcp-key.json
+      - name: Write GCP key
+        run: echo '${{ secrets.GCP_SA_KEY }}' > $HOME/gcp-key.json
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          credentials_json: $HOME/gcp-key.json
 
-      - name: Crawl Booking.com & Load to raw_hotels_dec2025 (raw)
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Crawl → Raw table
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: $HOME/gcp-key.json
         run: python crawler_to_bigquery.py
 
-      - name: Run 1. Staging.sql
-        uses: google-github-actions/run-bigquery@v1
-        with:
-          query: ${{ github.workspace }}/sql/1. Staging.sql
+      - name: 1. Staging
+        run: bq query --nouse_legacy_sql --replace --destination_table=${GCP_PROJECT}.${GCP_DATASET}.stg_booking_hotels < sql/1_staging.sql
 
-      - name: Run 2. dim_hotels.sql
-        uses: google-github-actions/run-bigquery@v1
-        with:
-          query: ${{ github.workspace }}/sql/2. dim_hotels.sql
+      - name: 2. Dim Hotels
+        run: bq query --nouse_legacy_sql --replace --destination_table=${GCP_PROJECT}.${GCP_DATASET}.dim_hotels < sql/2_dim_hotels.sql
 
-      - name: Run 3. dim_date.sql
-        uses: google-github-actions/run-bigquery@v1
-        with:
-          query: ${{ github.workspace }}/sql/3. dim_date.sql
+      - name: 3. Dim Date
+        run: bq query --nouse_legacy_sql --replace --destination_table=${GCP_PROJECT}.${GCP_DATASET}.dim_date < sql/3_dim_date.sql
 
-      - name: Run 4. fact_hotel_prices.sql
-        uses: google-github-actions/run-bigquery@v1
-        with:
-          query: ${{ github.workspace }}/sql/4. fact_hotel_prices.sql
+      - name: 4. Fact Table
+        run: bq query --nouse_legacy_sql --replace --destination_table=${GCP_PROJECT}.${GCP_DATASET}.fact_hotel_prices < sql/4_fact_hotel_prices.sql
 
-      - name: Done – Notification (optional)
-        run: echo "Pipeline hoàn tất 100%! Raw + Staging + Dim + Fact đã được cập nhật mới nhất $(date)"
+      - name: Done
+        run: |
+          echo "=================================="
+          echo "PIPELINE CHẠY THÀNH CÔNG 100%!"
+          echo "Xem dữ liệu tại: https://console.cloud.google.com/bigquery?p=${GCP_PROJECT}&d=${GCP_DATASET}&t=fact_hotel_prices"
+          echo "=================================="
