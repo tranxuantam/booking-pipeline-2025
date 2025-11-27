@@ -63,7 +63,7 @@ async def crawl_one_hotel(page):
                 checkout_str = checkout.strftime("%Y-%m-%d")
                 weekday_vn = ["Thứ Hai","Thứ Ba","Thứ Tư","Thứ Năm","Thứ Sáu","Thứ Bảy","Chủ Nhật"][checkout.weekday()]
 
-                url = f"https://www.booking.com/searchresults.vi.html?ss={quote_plus(city)}&checkin={checkin}&checkout={checkout_str}&group_adults=2&no_rooms=1&lang=vi"
+                url = f"https://www.booking.com/searchresults.vi.html?ss={quote_plus(city)}&checkin={checkin}&checkout={checkout_str}&group_adults=2&no_rooms=1&lang=vi&selected_currency=VND"
                 await page.goto(url, wait_until="domcontentloaded", timeout=30000)
                 await page.wait_for_timeout(random.randint(2000, 4000))
                 await page.wait_for_selector('div[data-testid="property-card"]', timeout=15000)
