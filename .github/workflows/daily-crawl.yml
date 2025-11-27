@@ -1,17 +1,14 @@
 name: Daily Booking Pipeline (Debug Mode)
-
 on:
   schedule:
     - cron: '0 1 * * *'
   workflow_dispatch:
-
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
     env:
       GCP_PROJECT: booking-project-479502
       GCP_DATASET: booking_dataset
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -27,8 +24,8 @@ jobs:
           cat requirements.txt
           echo "=== END DEBUG ==="
 
-      - name: Install dependencies & Playwright  # Thêm debug cho bước này
-        continue-on-error: true  # Tiếp tục dù fail để xem log
+      - name: Install dependencies & Playwright
+        continue-on-error: true
         run: |
           echo "=== DEBUG: Bắt đầu pip install ==="
           pip install -r requirements.txt
@@ -36,7 +33,7 @@ jobs:
           playwright install chromium --with-deps
           echo "=== DEBUG: Playwright install xong ==="
 
-      - name: Authenticate to Google Cloud  # Thêm debug cho auth
+      - name: Authenticate to Google Cloud
         continue-on-error: true
         uses: google-github-actions/auth@v2
         with:
@@ -44,20 +41,20 @@ jobs:
         env:
           GOOGLE_PROJECT_ID: ${{ env.GCP_PROJECT }}
 
-      - name: Setup Google Cloud SDK  # Debug gcloud
+      - name: Setup Google Cloud SDK
         continue-on-error: true
         uses: google-github-actions/setup-gcloud@v2
         env:
           GOOGLE_PROJECT_ID: ${{ env.GCP_PROJECT }}
 
-      - name: Test bq command  # Thêm bước test đơn giản trước crawl
+      - name: Test bq command
         continue-on-error: true
         run: |
           echo "=== DEBUG: Test bq ls (liệt kê datasets) ==="
           bq ls
           echo "=== END TEST bq ==="
 
-      - name: Crawl → Load raw table
+      - name: Crawl to Load raw table
         continue-on-error: true
         run: |
           echo "=== DEBUG: Bắt đầu crawler_to_bigquery.py ==="
@@ -67,10 +64,10 @@ jobs:
       - name: 1. Staging Table
         continue-on-error: true
         run: |
-          echo "=== DEBUG: Chạy 1_staging.sql ==="
+          echo "=== DEBUG: Chạy 1_Staging.sql ==="
           bq query --nouse_legacy_sql --replace --location=US \
             --destination_table=${GCP_PROJECT}.${GCP_DATASET}.stg_booking_hotels \
-            < sql/1_staging.sql
+            < sql/1_Staging.sql
           echo "=== END STAGING ==="
 
       - name: 2. Dim Hotels
