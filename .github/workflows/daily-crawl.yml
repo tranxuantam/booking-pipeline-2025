@@ -1,4 +1,4 @@
-name: Daily Booking Pipeline (Debug Mode)
+name: Daily Booking Pipeline
 on:
   schedule:
     - cron: '0 1 * * *'
@@ -65,32 +65,28 @@ jobs:
         continue-on-error: true
         run: |
           echo "=== DEBUG: Chạy 1_Staging.sql ==="
-          bq query --nouse_legacy_sql --replace --location=US \
-            < sql/1_Staging.sql
+          bq query --nouse_legacy_sql --location=US < sql/1_Staging.sql
           echo "=== END STAGING ==="
 
       - name: 2. Dim Hotels
         continue-on-error: true
         run: |
           echo "=== DEBUG: Chạy 2_dim_hotels.sql ==="
-          bq query --nouse_legacy_sql --replace --location=US \
-            < sql/2_dim_hotels.sql
+          bq query --nouse_legacy_sql --location=US < sql/2_dim_hotels.sql
           echo "=== END DIM HOTELS ==="
 
       - name: 3. Dim Date
         continue-on-error: true
         run: |
           echo "=== DEBUG: Chạy 3_dim_date.sql ==="
-          bq query --nouse_legacy_sql --replace --location=US \
-            < sql/3_dim_date.sql
+          bq query --nouse_legacy_sql --location=US < sql/3_dim_date.sql
           echo "=== END DIM DATE ==="
 
       - name: 4. Fact Table
         continue-on-error: true
         run: |
           echo "=== DEBUG: Chạy 4_fact_hotel_prices.sql ==="
-          bq query --nouse_legacy_sql --replace --location=US \
-            < sql/4_fact_hotel_prices.sql
+          bq query --nouse_legacy_sql --location=US < sql/4_fact_hotel_prices.sql
           echo "=== END FACT ==="
 
       - name: Final Debug Summary
