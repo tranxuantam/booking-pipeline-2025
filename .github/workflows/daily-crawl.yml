@@ -1,28 +1,61 @@
-name: Daily Crawl & Load to BigQuery
+name: Daily Full ETL – Crawl → Raw → Staging → Dim → Fact
 
 on:
   schedule:
-    - cron: '0 1 * * *'   # 8h sáng Việt Nam mỗi ngày
-  workflow_dispatch:
+    - cron: '0 1 * * *'   # Mỗi ngày 8h00 sáng Việt Nam (1h UTC)
+  workflow_dispatch:      # Cho phép chạy tay bất kỳ lúc nào
 
 jobs:
-  run-crawler:
+  full-pipeline:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    env:
+      GCP_PROJECT: booking-project-479502    
+      GCP_DATASET: booking_dataset
 
-      - name: Setup Python
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install Python packages & Playwright browser
         run: |
           pip install -r requirements.txt
           playwright install chromium --with-deps
 
-      - name: Create GCP key
+      - name: Create GCP service account key
         run: echo '${{ secrets.GCP_SA_KEY }}' > gcp-key.json
 
-      - name: Run crawler
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Crawl Booking.com & Load to raw_hotels_dec2025 (raw)
         run: python crawler_to_bigquery.py
+
+      - name: Run 1. Staging.sql
+        uses: google-github-actions/run-bigquery@v1
+        with:
+          query: ${{ github.workspace }}/sql/1. Staging.sql
+
+      - name: Run 2. dim_hotels.sql
+        uses: google-github-actions/run-bigquery@v1
+        with:
+          query: ${{ github.workspace }}/sql/2. dim_hotels.sql
+
+      - name: Run 3. dim_date.sql
+        uses: google-github-actions/run-bigquery@v1
+        with:
+          query: ${{ github.workspace }}/sql/3. dim_date.sql
+
+      - name: Run 4. fact_hotel_prices.sql
+        uses: google-github-actions/run-bigquery@v1
+        with:
+          query: ${{ github.workspace }}/sql/4. fact_hotel_prices.sql
+
+      - name: Done – Notification (optional)
+        run: echo "Pipeline hoàn tất 100%! Raw + Staging + Dim + Fact đã được cập nhật mới nhất $(date)"
