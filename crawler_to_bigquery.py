@@ -6,22 +6,18 @@ from datetime import datetime, timedelta
 from urllib.parse import quote_plus
 from playwright.async_api import async_playwright
 import pandas as pd
-
-# ==================== BIGQUERY – TỰ ĐỘNG LẤY CREDENTIALS TỪ GITHUB ACTIONS ====================
 from google.cloud import bigquery
 
 PROJECT_ID = "booking-project-479502"
 DATASET_ID = "booking_dataset"
-TABLE_ID   = "raw_hotels_dec2025"
+TABLE_ID = "raw_hotels_dec2025"
 
 client = bigquery.Client(project=PROJECT_ID)
 
-# Tạo dataset + table nếu chưa có
 def init_bigquery_table():
     dataset_ref = bigquery.Dataset(f"{PROJECT_ID}.{DATASET_ID}")
     client.create_dataset(dataset_ref, exists_ok=True)
     print(f"Dataset {DATASET_ID} sẵn sàng hoặc đã tồn tại")
-
     schema = [
         bigquery.SchemaField("city", "STRING"),
         bigquery.SchemaField("hotel_name", "STRING"),
@@ -39,7 +35,6 @@ def init_bigquery_table():
     print(f"Table {TABLE_ID} đã sẵn sàng!")
 
 init_bigquery_table()
-# ========================================================================
 
 TARGET_COUNT = 100
 all_data = []
@@ -123,22 +118,26 @@ async def worker(page):
 
 async def main():
     global all_data
-    os.makedirs("output", exist_ok=True)
-
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
             viewport={"width": 1280, "height": 800},
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36",
             locale="vi-VN",
-            java_script_enabled=True,
+
+            extra_http_headers={"Accept-Language": "vi-VN,vi;q=0.9"},
+            geolocation={"longitude": 106.6297, "latitude": 10.8231},  # Tọa độ TP.HCM
+            permissions=["geolocation"]
         )
+        # Bật geolocation để Booking.com nhận diện là Việt Nam
+        await context.grant_permissions(["geolocation"])
+
         tasks = []
         for _ in range(15):
             page = await context.new_page()
             tasks.append(asyncio.create_task(worker(page)))
 
-        print("Bắt đầu crawl bản ghi – sẽ ghi THÊM vào BigQuery mỗi ngày...")
+        print("Bắt đầu crawl – sẽ hiển thị đúng VND dù chạy trên GitHub Actions (Mỹ)")
         await asyncio.gather(*tasks)
         await browser.close()
 
@@ -152,10 +151,7 @@ async def main():
     job = client.load_table_from_dataframe(
         df,
         f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}",
-        job_config=bigquery.LoadJobConfig(
-            write_disposition="WRITE_APPEND",  
-            autodetect=False
-        )
+        job_config=bigquery.LoadJobConfig(write_disposition="WRITE_APPEND", autodetect=False)
     )
     job.result()
     print(f"HOÀN TẤT! Đã GHI THÊM {len(final_data)} bản ghi vào BigQuery!")
