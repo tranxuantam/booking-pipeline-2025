@@ -16,12 +16,14 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup Python + Playwright
+      - name: Setup Python 3.11
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      - run: |
-          pip install -q install -r requirements.txt
+
+      - name: Install dependencies & Playwright  # ← ĐÃ SỬA LỖI PIP Ở ĐÂY
+        run: |
+          pip install -r requirements.txt  # Không có "-q install" thừa nữa
           playwright install chromium --with-deps
 
       - name: Write GCP key
@@ -32,7 +34,7 @@ jobs:
         with:
           credentials_json: $HOME/gcp-key.json
 
-      - name: Setup Google Cloud SDK
+      - name: Setup Google Cloud SDK  # Để dùng lệnh bq
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Crawl → Raw table
@@ -40,17 +42,41 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: $HOME/gcp-key.json
         run: python crawler_to_bigquery.py
 
-      - name: 1. Staging
-        run: bq query --nouse_legacy_sql --replace --destination_table=${GCP_PROJECT}.${GCP_DATASET}.stg_booking_hotels < sql/1_staging.sql
+      - name: 1. Staging  # ← ĐÃ SỬA LỖI BQ QUERY (thêm --location=US + project.dataset.table format chuẩn)
+        run: |
+          bq query \
+            --nouse_legacy_sql \
+            --replace \
+            --location=US \
+            --destination_table=${GCP_PROJECT}.${GCP_DATASET}.stg_booking_hotels \
+            < sql/1_staging.sql
 
       - name: 2. Dim Hotels
-        run: bq query --nouse_legacy_sql --replace --destination_table=${GCP_PROJECT}.${GCP_DATASET}.dim_hotels < sql/2_dim_hotels.sql
+        run: |
+          bq query \
+            --nouse_legacy_sql \
+            --replace \
+            --location=US \
+            --destination_table=${GCP_PROJECT}.${GCP_DATASET}.dim_hotels \
+            < sql/2_dim_hotels.sql
 
       - name: 3. Dim Date
-        run: bq query --nouse_legacy_sql --replace --destination_table=${GCP_PROJECT}.${GCP_DATASET}.dim_date < sql/3_dim_date.sql
+        run: |
+          bq query \
+            --nouse_legacy_sql \
+            --replace \
+            --location=US \
+            --destination_table=${GCP_PROJECT}.${GCP_DATASET}.dim_date \
+            < sql/3_dim_date.sql
 
       - name: 4. Fact Table
-        run: bq query --nouse_legacy_sql --replace --destination_table=${GCP_PROJECT}.${GCP_DATASET}.fact_hotel_prices < sql/4_fact_hotel_prices.sql
+        run: |
+          bq query \
+            --nouse_legacy_sql \
+            --replace \
+            --location=US \
+            --destination_table=${GCP_PROJECT}.${GCP_DATASET}.fact_hotel_prices \
+            < sql/4_fact_hotel_prices.sql
 
       - name: Done
         run: |
