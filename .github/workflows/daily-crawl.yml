@@ -1,8 +1,8 @@
-name: Daily Booking Pipeline
+name: Daily Booking Pipeline (Debug Mode)
 
 on:
   schedule:
-    - cron: '0 1 * * *'   # 8h sáng Việt Nam
+    - cron: '0 1 * * *'
   workflow_dispatch:
 
 jobs:
@@ -21,51 +21,87 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies & Playwright
+      - name: Check requirements.txt
         run: |
-          pip install -r requirements.txt
-          playwright install chromium --with-deps
+          echo "=== DEBUG: Nội dung requirements.txt ==="
+          cat requirements.txt
+          echo "=== END DEBUG ==="
 
-      - name: Authenticate to Google Cloud
+      - name: Install dependencies & Playwright  # Thêm debug cho bước này
+        continue-on-error: true  # Tiếp tục dù fail để xem log
+        run: |
+          echo "=== DEBUG: Bắt đầu pip install ==="
+          pip install -r requirements.txt
+          echo "=== DEBUG: Pip install xong, bắt đầu Playwright ==="
+          playwright install chromium --with-deps
+          echo "=== DEBUG: Playwright install xong ==="
+
+      - name: Authenticate to Google Cloud  # Thêm debug cho auth
+        continue-on-error: true
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
+        env:
+          GOOGLE_PROJECT_ID: ${{ env.GCP_PROJECT }}
 
-      - name: Setup Google Cloud SDK
+      - name: Setup Google Cloud SDK  # Debug gcloud
+        continue-on-error: true
         uses: google-github-actions/setup-gcloud@v2
+        env:
+          GOOGLE_PROJECT_ID: ${{ env.GCP_PROJECT }}
+
+      - name: Test bq command  # Thêm bước test đơn giản trước crawl
+        continue-on-error: true
+        run: |
+          echo "=== DEBUG: Test bq ls (liệt kê datasets) ==="
+          bq ls
+          echo "=== END TEST bq ==="
 
       - name: Crawl → Load raw table
-        run: python crawler_to_bigquery.py
+        continue-on-error: true
+        run: |
+          echo "=== DEBUG: Bắt đầu crawler_to_bigquery.py ==="
+          python crawler_to_bigquery.py
+          echo "=== END CRAWL ==="
 
       - name: 1. Staging Table
+        continue-on-error: true
         run: |
+          echo "=== DEBUG: Chạy 1_staging.sql ==="
           bq query --nouse_legacy_sql --replace --location=US \
             --destination_table=${GCP_PROJECT}.${GCP_DATASET}.stg_booking_hotels \
             < sql/1_staging.sql
+          echo "=== END STAGING ==="
 
       - name: 2. Dim Hotels
+        continue-on-error: true
         run: |
+          echo "=== DEBUG: Chạy 2_dim_hotels.sql ==="
           bq query --nouse_legacy_sql --replace --location=US \
             --destination_table=${GCP_PROJECT}.${GCP_DATASET}.dim_hotels \
             < sql/2_dim_hotels.sql
+          echo "=== END DIM HOTELS ==="
 
       - name: 3. Dim Date
+        continue-on-error: true
         run: |
+          echo "=== DEBUG: Chạy 3_dim_date.sql ==="
           bq query --nouse_legacy_sql --replace --location=US \
             --destination_table=${GCP_PROJECT}.${GCP_DATASET}.dim_date \
             < sql/3_dim_date.sql
+          echo "=== END DIM DATE ==="
 
       - name: 4. Fact Table
+        continue-on-error: true
         run: |
+          echo "=== DEBUG: Chạy 4_fact_hotel_prices.sql ==="
           bq query --nouse_legacy_sql --replace --location=US \
             --destination_table=${GCP_PROJECT}.${GCP_DATASET}.fact_hotel_prices \
             < sql/4_fact_hotel_prices.sql
+          echo "=== END FACT ==="
 
-      - name: HOÀN TẤT
+      - name: Final Debug Summary
         run: |
-          echo "========================================"
-          echo "PIPELINE CHẠY XANH 100%!"
-          echo "Dữ liệu mới nhất đã có trong bảng:"
-          echo "→ fact_hotel_prices"
-          echo "Link nhanh: https://console.cloud.google.com/bigquery?p=booking-project-479502&d=booking_dataset&t=fact_hotel_prices"
+          echo "=== DEBUG TỔNG KẾT: Kiểm tra tất cả bước ==="
+          echo "Pipeline kết thúc - kiểm tra log trên để xem fail ở đâu!"
           echo "========================================"
