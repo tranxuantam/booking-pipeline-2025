@@ -51,7 +51,7 @@ def init_bigquery_table():
 init_bigquery_table()
 # ========================================================================
 
-TARGET_COUNT = 1000
+TARGET_COUNT = 100
 all_data = []
 sem = asyncio.Semaphore(15)
 
