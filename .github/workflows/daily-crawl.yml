@@ -21,66 +21,51 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies & Playwright  # ← ĐÃ SỬA LỖI PIP Ở ĐÂY
+      - name: Install dependencies & Playwright
         run: |
-          pip install -r requirements.txt  # Không có "-q install" thừa nữa
+          pip install -r requirements.txt
           playwright install chromium --with-deps
-
-      - name: Write GCP key
-        run: echo '${{ secrets.GCP_SA_KEY }}' > $HOME/gcp-key.json
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: $HOME/gcp-key.json
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Setup Google Cloud SDK  # Để dùng lệnh bq
+      - name: Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Crawl → Raw table
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: $HOME/gcp-key.json
+      - name: Crawl → Load raw table
         run: python crawler_to_bigquery.py
 
-      - name: 1. Staging  # ← ĐÃ SỬA LỖI BQ QUERY (thêm --location=US + project.dataset.table format chuẩn)
+      - name: 1. Staging Table
         run: |
-          bq query \
-            --nouse_legacy_sql \
-            --replace \
-            --location=US \
+          bq query --nouse_legacy_sql --replace --location=US \
             --destination_table=${GCP_PROJECT}.${GCP_DATASET}.stg_booking_hotels \
             < sql/1_staging.sql
 
       - name: 2. Dim Hotels
         run: |
-          bq query \
-            --nouse_legacy_sql \
-            --replace \
-            --location=US \
+          bq query --nouse_legacy_sql --replace --location=US \
             --destination_table=${GCP_PROJECT}.${GCP_DATASET}.dim_hotels \
             < sql/2_dim_hotels.sql
 
       - name: 3. Dim Date
         run: |
-          bq query \
-            --nouse_legacy_sql \
-            --replace \
-            --location=US \
+          bq query --nouse_legacy_sql --replace --location=US \
             --destination_table=${GCP_PROJECT}.${GCP_DATASET}.dim_date \
             < sql/3_dim_date.sql
 
       - name: 4. Fact Table
         run: |
-          bq query \
-            --nouse_legacy_sql \
-            --replace \
-            --location=US \
+          bq query --nouse_legacy_sql --replace --location=US \
             --destination_table=${GCP_PROJECT}.${GCP_DATASET}.fact_hotel_prices \
             < sql/4_fact_hotel_prices.sql
 
-      - name: Done
+      - name: HOÀN TẤT
         run: |
-          echo "=================================="
-          echo "PIPELINE CHẠY THÀNH CÔNG 100%!"
-          echo "Xem dữ liệu tại: https://console.cloud.google.com/bigquery?p=${GCP_PROJECT}&d=${GCP_DATASET}&t=fact_hotel_prices"
-          echo "=================================="
+          echo "========================================"
+          echo "PIPELINE CHẠY XANH 100%!"
+          echo "Dữ liệu mới nhất đã có trong bảng:"
+          echo "→ fact_hotel_prices"
+          echo "Link nhanh: https://console.cloud.google.com/bigquery?p=booking-project-479502&d=booking_dataset&t=fact_hotel_prices"
+          echo "========================================"
