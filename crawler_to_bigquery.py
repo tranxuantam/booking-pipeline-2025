@@ -18,36 +18,25 @@ client = bigquery.Client(project=PROJECT_ID)
 
 # Tạo dataset + table nếu chưa có
 def init_bigquery_table():
-    from google.api_core.exceptions import NotFound
-    dataset_ref = client.dataset(DATASET_ID)
-    try:
-        client.get_dataset(dataset_ref)
-        print(f"Dataset {DATASET_ID} đã tồn tại")
-    except NotFound:
-        dataset = bigquery.Dataset(dataset_ref)
-        dataset.location = "US"
-        client.create_dataset(dataset)
-        print(f"Đã tạo dataset {DATASET_ID}")
+    dataset_ref = bigquery.Dataset(f"{PROJECT_ID}.{DATASET_ID}")
+    client.create_dataset(dataset_ref, exists_ok=True)
+    print(f"Dataset {DATASET_ID} sẵn sàng hoặc đã tồn tại")
 
-    table_ref = dataset_ref.table(TABLE_ID)
-    try:
-        client.get_table(table_ref)
-        print(f"Table {TABLE_ID} đã tồn tại")
-    except NotFound:
-        schema = [
-            bigquery.SchemaField("city", "STRING"),
-            bigquery.SchemaField("hotel_name", "STRING"),
-            bigquery.SchemaField("price_vnd", "STRING"),
-            bigquery.SchemaField("rating", "STRING"),
-            bigquery.SchemaField("review_text", "STRING"),
-            bigquery.SchemaField("checkin_date", "STRING"),
-            bigquery.SchemaField("checkout_date", "STRING"),
-            bigquery.SchemaField("day_of_week", "STRING"),
-            bigquery.SchemaField("crawl_time", "STRING"),
-        ]
-        table = bigquery.Table(table_ref, schema=schema)
-        client.create_table(table)
-        print(f"Đã tạo table {TABLE_ID}")
+    schema = [
+        bigquery.SchemaField("city", "STRING"),
+        bigquery.SchemaField("hotel_name", "STRING"),
+        bigquery.SchemaField("price_vnd", "STRING"),
+        bigquery.SchemaField("rating", "STRING"),
+        bigquery.SchemaField("review_text", "STRING"),
+        bigquery.SchemaField("checkin_date", "STRING"),
+        bigquery.SchemaField("checkout_date", "STRING"),
+        bigquery.SchemaField("day_of_week", "STRING"),
+        bigquery.SchemaField("crawl_time", "STRING"),
+    ]
+    table_ref = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}"
+    table = bigquery.Table(table_ref, schema=schema)
+    client.create_table(table, exists_ok=True)
+    print(f"Table {TABLE_ID} đã sẵn sàng!")
 
 init_bigquery_table()
 # ========================================================================
