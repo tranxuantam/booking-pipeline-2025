@@ -60,6 +60,7 @@ jobs:
           echo "=== DEBUG: Bắt đầu crawler_to_bigquery.py ==="
           python crawler_to_bigquery.py
           echo "=== END CRAWL ==="
+          
       - name: 1. Staging Table
         continue-on-error: true
         run: |
@@ -73,7 +74,6 @@ jobs:
         run: |
           echo "=== DEBUG: Chạy 2_dim_hotels.sql ==="
           bq query --nouse_legacy_sql --replace --location=US \
-            --destination_table=${GCP_PROJECT}.${GCP_DATASET}.dim_hotels \
             < sql/2_dim_hotels.sql
           echo "=== END DIM HOTELS ==="
 
@@ -82,7 +82,6 @@ jobs:
         run: |
           echo "=== DEBUG: Chạy 3_dim_date.sql ==="
           bq query --nouse_legacy_sql --replace --location=US \
-            --destination_table=${GCP_PROJECT}.${GCP_DATASET}.dim_date \
             < sql/3_dim_date.sql
           echo "=== END DIM DATE ==="
 
@@ -91,7 +90,6 @@ jobs:
         run: |
           echo "=== DEBUG: Chạy 4_fact_hotel_prices.sql ==="
           bq query --nouse_legacy_sql --replace --location=US \
-            --destination_table=${GCP_PROJECT}.${GCP_DATASET}.fact_hotel_prices \
             < sql/4_fact_hotel_prices.sql
           echo "=== END FACT ==="
 
